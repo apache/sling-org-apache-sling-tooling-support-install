@@ -33,9 +33,9 @@
     <name>Apache Sling Tooling Support Install</name>
 
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/sling/trunk/tooling/support/install</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/sling/trunk/tooling/support/install</developerConnection>
-        <url>http://svn.apache.org/viewvc/sling/trunk/tooling/support/install</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</conncetion>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-tooling-support-install.git</url>
     </scm>
 
     <build>
