@@ -19,7 +19,7 @@ package org.apache.sling.tooling.support.install.impl;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.felix.utils.json.JSONWriter;
 
 public class InstallationResult {
