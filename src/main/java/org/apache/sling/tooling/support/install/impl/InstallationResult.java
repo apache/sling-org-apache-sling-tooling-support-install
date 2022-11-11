@@ -19,13 +19,12 @@ package org.apache.sling.tooling.support.install.impl;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.felix.utils.json.JSONWriter;
 
 public class InstallationResult {
 
     private final boolean status;
-    private final String message;
+    private final String message; // may be null
 
     public InstallationResult(boolean status, String message) {
         this.status = status;
@@ -38,7 +37,7 @@ public class InstallationResult {
             JSONWriter writer = new JSONWriter(out);
             writer.object();
             writer.key("status").value(status ? "OK" : "FAILURE");
-            if (!StringUtils.isEmpty(message)) {
+            if (message != null) {
                 writer.key("message").value(message);
             }
             writer.endObject();
