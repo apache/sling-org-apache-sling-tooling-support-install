@@ -43,6 +43,7 @@ import javax.servlet.http.Part;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -94,15 +95,13 @@ public class InstallServlet extends HttpServlet {
             return;
         }
         if (isMultipart) {
-            installBasedOnUploadedJar(req, resp, refreshPackages);
+            installBundleFromJar(req, resp, refreshPackages);
         } else {
-            installBasedOnDirectory(resp, Paths.get(dirPath), refreshPackages);
+            installBundleFromDirectory(resp, Paths.get(dirPath), refreshPackages);
         }
     }
 
-    private void installBasedOnUploadedJar(HttpServletRequest req, HttpServletResponse resp, boolean refreshPackages) throws IOException, ServletException {
-
-        InstallationResult result = null;
+    private void installBundleFromJar(HttpServletRequest req, HttpServletResponse resp, boolean refreshPackages) throws IOException, ServletException {
 
         Collection<Part> parts = req.getParts();
         if (parts.size() != 1) {
@@ -112,21 +111,37 @@ public class InstallServlet extends HttpServlet {
 
         Part part = parts.iterator().next();
 
-        try (InputStream input = new BufferedInputStream(part.getInputStream(), MANIFEST_SIZE_IN_INPUTSTREAM)) {
+        try (InputStream input = part.getInputStream()) {
+            installBundleFromJar(input, refreshPackages);
+            InstallationResult result = new InstallationResult(true, null);
+            resp.setStatus(200);
+            result.render(resp.getWriter());
+        } catch (IllegalArgumentException e) {
+            logAndWriteError(e, resp);
+        }
+    }
+
+    /**
+     * 
+     * @param inputStream
+     * @param refreshPackages
+     * @throws IOException
+     * @throws IllegalArgumentException if the provided input stream does not contain a valid OSGi bundle
+     */
+    Bundle installBundleFromJar(InputStream inputStream, boolean refreshPackages) throws IOException {
+        try (InputStream input = new BufferedInputStream(new CloseShieldInputStream(inputStream), MANIFEST_SIZE_IN_INPUTSTREAM)) {
             input.mark(MANIFEST_SIZE_IN_INPUTSTREAM);
             final String version;
             final String symbolicName;
-            try (JarInputStream jar = new JarInputStream(new BoundedInputStream(input, MANIFEST_SIZE_IN_INPUTSTREAM))) {
+            try (JarInputStream jar = new JarInputStream(new BoundedInputStream(new CloseShieldInputStream(input), MANIFEST_SIZE_IN_INPUTSTREAM))) {
                 
                 Manifest manifest = jar.getManifest();
                 if (manifest == null) {
-                    logAndWriteError("Uploaded jar file does not contain a manifest", resp);
-                    return;
+                    throw new IllegalArgumentException("Uploaded jar file does not contain a manifest");
                 }
                 symbolicName = manifest.getMainAttributes().getValue(Constants.BUNDLE_SYMBOLICNAME);
                 if (symbolicName == null) {
-                    logAndWriteError("Manifest does not have a " + Constants.BUNDLE_SYMBOLICNAME, resp);
-                    return;
+                    throw new IllegalArgumentException("Manifest does not have a " + Constants.BUNDLE_SYMBOLICNAME);
                 }
                 version = manifest.getMainAttributes().getValue(Constants.BUNDLE_VERSION);
             }
@@ -136,13 +151,9 @@ public class InstallServlet extends HttpServlet {
 
             Bundle found = getBundle(symbolicName);
             try {
-                installOrUpdateBundle(found, input, "inputstream:" + symbolicName + "-" + version + ".jar", refreshPackages);
-
-                result = new InstallationResult(true, null);
-                resp.setStatus(200);
-                result.render(resp.getWriter());
+                return installOrUpdateBundle(found, input, "inputstream:" + symbolicName + "-" + version + ".jar", refreshPackages);
             } catch (BundleException e) {
-                logAndWriteError("Unable to install/update bundle " + symbolicName, e, resp);
+                throw new IllegalArgumentException("Unable to install/update bundle " + symbolicName, e);
             }
         }
     }
@@ -153,15 +164,31 @@ public class InstallServlet extends HttpServlet {
         new InstallationResult(false, message).render(resp.getWriter());
     }
 
-    private void logAndWriteError(String message, Exception e, HttpServletResponse resp) throws IOException {
-        logger.info(message, e);
+    private void logAndWriteError(Exception e, HttpServletResponse resp) throws IOException {
+        logger.info(e.getMessage(), e);
         resp.setStatus(500);
-        new InstallationResult(false, message + " : " + e.getMessage()).render(resp.getWriter());
+        new InstallationResult(false, e.getMessage()).render(resp.getWriter());
     }
 
-    private void installBasedOnDirectory(HttpServletResponse resp, final Path dir, boolean refreshPackages) throws IOException {
-        InstallationResult result = null;
+    private void installBundleFromDirectory(HttpServletResponse resp, final Path dir, boolean refreshPackages) throws IOException {
+        try {
+            installBundleFromDirectory(dir, refreshPackages);
+            InstallationResult result = new InstallationResult(true, null);
+            resp.setStatus(200);
+            result.render(resp.getWriter());
+        } catch (IllegalArgumentException e) {
+            logAndWriteError(e, resp);
+        }
+    }
 
+    /**
+     * 
+     * @param dir
+     * @param refreshPackages
+     * @throws IOException
+     * @throws IllegalArgumentException if the provided directory does not contain a valid exploded OSGi bundle
+     */
+    Bundle installBundleFromDirectory(final Path dir, boolean refreshPackages) throws IOException {
         if (Files.isDirectory(dir)) {
             logger.info("Checking dir {} for bundle install", dir);
             final Path manifestFile = dir.resolve(JarFile.MANIFEST_NAME);
@@ -177,46 +204,42 @@ public class InstallServlet extends HttpServlet {
                         Path tmpJarFile = Files.createTempFile(dir.getFileName().toString(), "bundle");
                         try {
                             createJar(dir, tmpJarFile, mf);
-                            try(InputStream in = Files.newInputStream(tmpJarFile)) {
+                            try (InputStream in = Files.newInputStream(tmpJarFile)) {
                                 String location = dir.toAbsolutePath().toString();
-                                installOrUpdateBundle(found, in, location, refreshPackages);
-                                result = new InstallationResult(true, null);
-                                resp.setStatus(200);
-                                result.render(resp.getWriter());
+                                return installOrUpdateBundle(found, in, location, refreshPackages);
                             } catch (final BundleException be) {
-                                logAndWriteError("Unable to install/update bundle from dir " + dir, be, resp);
+                                throw new IllegalArgumentException("Unable to install/update bundle from dir " + dir, be);
                             }
                         } finally {
                             Files.delete(tmpJarFile);
                         }
                     } else {
-                        logAndWriteError("Manifest in " + dir + " does not have a symbolic name", resp);
+                        throw new IllegalArgumentException("Manifest in " + dir + " does not have a symbolic name");
                     }
                 }
             } else {
-                result = new InstallationResult(false, "Dir " + dir + " does not have a manifest");
-                logAndWriteError("Dir " + dir + " does not have a manifest", resp);
+                throw new IllegalArgumentException("Dir " + dir + " does not have a manifest");
             }
         } else {
-            result = new InstallationResult(false, "Dir " + dir + " does not exist");
-            logAndWriteError("Dir " + dir + " does not exist", resp);
+            throw new IllegalArgumentException("Dir " + dir + " does not exist");
         }
     }
 
-    private void installOrUpdateBundle(Bundle bundle, final InputStream in, String location, boolean refreshPackages) throws BundleException {
+    private Bundle installOrUpdateBundle(Bundle bundle, final InputStream in, String location, boolean refreshPackages) throws BundleException {
         if (bundle != null) {
             // update
             bundle.update(in);
         } else {
             // install
-            final Bundle b = bundleContext.installBundle(location, in);
-            b.start();
+            bundle = bundleContext.installBundle(location, in);
+            bundle.start();
         }
         if (refreshPackages) {
-            refreshBundle( bundle );
+            refreshBundle(bundle);
         }
+        return bundle;
     }
-
+    
     private void refreshBundle(Bundle bundle) {
         FrameworkWiring frameworkWiring = bundleContext.getBundle(Constants.SYSTEM_BUNDLE_ID).adapt(FrameworkWiring.class);
         // take into account added/removed packages for updated bundles and newly satisfied optional package imports
