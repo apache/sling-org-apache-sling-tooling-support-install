@@ -51,6 +51,8 @@ import org.osgi.framework.Constants;
 import org.osgi.framework.wiring.FrameworkWiring;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
+import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardContextSelect;
 import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardServletMultipart;
 import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardServletPattern;
 import org.slf4j.Logger;
@@ -62,6 +64,8 @@ import org.slf4j.LoggerFactory;
 @Component(service = Servlet.class)
 @HttpWhiteboardServletPattern("/system/sling/tooling/install")
 @HttpWhiteboardServletMultipart(enabled = true, fileSizeThreshold = InstallServlet.UPLOAD_IN_MEMORY_SIZE_THRESHOLD)
+//choose another servlet context with a higher ranking than the Sling one (https://issues.apache.org/jira/browse/SLING-11677)
+@HttpWhiteboardContextSelect("(" + HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME + "=org.osgi.service.http)")
 public class InstallServlet extends HttpServlet {
 
     private static final long serialVersionUID = -8820366266126231409L;
