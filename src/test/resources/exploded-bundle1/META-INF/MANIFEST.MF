@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Bundle-SymbolicName: test-bundle1
+Bundle-Name: Apache Sling Tooling Support Install
+Bundle-Version: 1.0.0.SNAPSHOT
+Created-By: Maven JAR Plugin 3.2.2
+Specification-Version: 1.0
+
