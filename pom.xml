@@ -30,7 +30,7 @@
     <version>1.0.7-SNAPSHOT</version>
 
     <name>Apache Sling Tooling Support Install</name>
-
+    <description>ReST endpoint for installing/updating a bundle from a directory or a JAR</description>
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</developerConnection>

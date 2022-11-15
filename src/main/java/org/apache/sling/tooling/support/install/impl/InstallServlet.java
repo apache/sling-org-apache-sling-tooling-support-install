@@ -86,18 +86,22 @@ public class InstallServlet extends HttpServlet {
         final String dirPath = req.getParameter(DIR);
         final boolean refreshPackages = Boolean.parseBoolean(req.getParameter(dirPath));
         boolean isMultipart = req.getContentType() != null && req.getContentType().toLowerCase().indexOf("multipart/form-data") > -1;
-        if (dirPath == null && !isMultipart) {
-            logger.error("No dir parameter specified : {} and no multipart content found", req.getParameterMap());
-            resp.setStatus(500);
-            InstallationResult result = new InstallationResult(false, "No dir parameter specified: "
-                    + req.getParameterMap() + " and no multipart content found");
-            result.render(resp.getWriter());
-            return;
-        }
-        if (isMultipart) {
-            installBundleFromJar(req, resp, refreshPackages);
-        } else {
-            installBundleFromDirectory(resp, Paths.get(dirPath), refreshPackages);
+        try {
+            if (dirPath == null && !isMultipart) {
+                logger.error("No dir parameter specified : {} and no multipart content found", req.getParameterMap());
+                resp.setStatus(500);
+                InstallationResult result = new InstallationResult(false, "No dir parameter specified: "
+                        + req.getParameterMap() + " and no multipart content found");
+                result.render(resp.getWriter());
+                return;
+            }
+            if (isMultipart) {
+                installBundleFromJar(req, resp, refreshPackages);
+            } else {
+                installBundleFromDirectory(resp, Paths.get(dirPath), refreshPackages);
+            }
+        } catch (IOException e) {
+            throw new ServletException(e);
         }
     }
 
