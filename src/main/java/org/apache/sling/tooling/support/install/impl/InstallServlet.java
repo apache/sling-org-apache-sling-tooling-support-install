@@ -83,10 +83,9 @@ public class InstallServlet extends HttpServlet {
         final boolean refreshPackages = Boolean.parseBoolean(req.getParameter(dirPath));
         try {
             if (dirPath == null) {
-                logger.error("No dir parameter specified : {}", req.getParameterMap());
+                logger.error("No mandatory dir parameter specified");
                 resp.setStatus(500);
-                InstallationResult result = new InstallationResult(false, "No dir parameter specified: "
-                        + req.getParameterMap());
+                InstallationResult result = new InstallationResult(false, "No mandatory dir parameter specified");
                 result.render(resp.getWriter());
                 return;
             }
