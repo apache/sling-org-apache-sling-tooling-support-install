@@ -30,7 +30,7 @@
     <version>1.0.7-SNAPSHOT</version>
 
     <name>Apache Sling Tooling Support Install</name>
-    <description>ReST endpoint for installing/updating a bundle from a directory or a JAR</description>
+    <description>ReST endpoint for installing/updating a bundle from a directory</description>
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-tooling-support-install.git</developerConnection>
@@ -107,29 +107,6 @@
                         <exclude>src/test/resources/exploded-bundle1/**</exclude>
                     </excludes>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-test-bundle</id>
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.apache.sling</groupId>
-                                    <artifactId>org.apache.sling.commons.messaging</artifactId>
-                                    <version>1.0.0</version>
-                                </artifactItem>
-                            </artifactItems>
-                            <outputDirectory>${project.build.testOutputDirectory}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

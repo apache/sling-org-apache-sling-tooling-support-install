@@ -17,6 +17,7 @@
 package org.apache.sling.tooling.support.install.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.AdditionalAnswers.answer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -25,7 +26,6 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.jar.JarInputStream;
 
 import org.apache.commons.io.IOUtils;
@@ -37,8 +37,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
-
-import static org.mockito.AdditionalAnswers.answer;
 
 class InstallServletTest {
 
@@ -60,15 +58,6 @@ class InstallServletTest {
                 }
             }));
         servlet = new InstallServlet(bundleContext);
-    }
-
-    @Test
-    void testInstallJar() throws IOException, BundleException {
-        try (InputStream input = Objects.requireNonNull(getClass().getResourceAsStream("/org.apache.sling.commons.messaging-1.0.0.jar"))) {
-            servlet.installBundleFromJar(input, false);
-        }
-        Mockito.verify(bundleContext).installBundle(Mockito.eq("inputstream:org.apache.sling.commons.messaging-1.0.0.jar"), Mockito.any(InputStream.class));
-        assertBundle(output.toByteArray(), 17, "org.apache.sling.commons.messaging");
     }
 
     @Test
