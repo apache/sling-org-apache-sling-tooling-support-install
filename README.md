@@ -5,3 +5,5 @@
 # Apache Sling Tooling Support Install
 
 This module is part of the [Apache Sling](https://sling.apache.org) project.
+
+This bundle allows to install bundles into the OSGi runtime from local filesystem folders. It is used from [Sling IDE Tooling](https://sling.apache.org/documentation/development/ide-tooling.html).

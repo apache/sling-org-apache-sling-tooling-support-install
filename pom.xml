@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>org.apache.sling.tooling.support.install</artifactId>
-    <version>1.0.7-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
 
     <name>Apache Sling Tooling Support Install</name>
     <description>ReST endpoint for installing/updating a bundle from a directory</description>
@@ -37,6 +37,10 @@
         <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-tooling-support-install.git</url>
         <tag>HEAD</tag>
     </scm>
+
+    <properties>
+        <project.build.outputTimestamp>2022-07-10T09:19:36Z</project.build.outputTimestamp>
+    </properties>
 
     <dependencies>
         <dependency>
