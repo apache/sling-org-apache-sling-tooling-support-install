@@ -66,9 +66,6 @@ public class InstallServlet extends HttpServlet {
 
     private static final String DIR = "dir";
 
-    public static final int UPLOAD_IN_MEMORY_SIZE_THRESHOLD = 512 * 1024 * 1024;
-    public static final int MANIFEST_SIZE_IN_INPUTSTREAM = 2 * 1024 * 1024;
-
     private final BundleContext bundleContext;
 
     @Activate
