@@ -16,17 +16,14 @@
  */
 package org.apache.sling.tooling.support.install.impl;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.jar.JarFile;
-import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
@@ -39,11 +36,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BoundedInputStream;
-import org.apache.commons.io.input.CloseShieldInputStream;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -53,17 +47,15 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
 import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardContextSelect;
-import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardServletMultipart;
 import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardServletPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ReST endpoint for installing/updating a bundle from a directory or a JAR
+ * ReST endpoint for installing/updating a bundle from a directory
  */
 @Component(service = Servlet.class)
 @HttpWhiteboardServletPattern("/system/sling/tooling/install")
-@HttpWhiteboardServletMultipart(enabled = true, fileSizeThreshold = InstallServlet.UPLOAD_IN_MEMORY_SIZE_THRESHOLD)
 //choose another servlet context with a higher ranking than the Sling one (https://issues.apache.org/jira/browse/SLING-11677)
 @HttpWhiteboardContextSelect("(" + HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME + "=org.osgi.service.http)")
 public class InstallServlet extends HttpServlet {
@@ -89,87 +81,19 @@ public class InstallServlet extends HttpServlet {
             throws ServletException, IOException {
         final String dirPath = req.getParameter(DIR);
         final boolean refreshPackages = Boolean.parseBoolean(req.getParameter(dirPath));
-        boolean isMultipart = req.getContentType() != null && req.getContentType().toLowerCase().indexOf("multipart/form-data") > -1;
         try {
-            if (dirPath == null && !isMultipart) {
-                logger.error("No dir parameter specified : {} and no multipart content found", req.getParameterMap());
+            if (dirPath == null) {
+                logger.error("No dir parameter specified : {}", req.getParameterMap());
                 resp.setStatus(500);
                 InstallationResult result = new InstallationResult(false, "No dir parameter specified: "
-                        + req.getParameterMap() + " and no multipart content found");
+                        + req.getParameterMap());
                 result.render(resp.getWriter());
                 return;
             }
-            if (isMultipart) {
-                installBundleFromJar(req, resp, refreshPackages);
-            } else {
-                installBundleFromDirectory(resp, Paths.get(dirPath), refreshPackages);
-            }
+            installBundleFromDirectory(resp, Paths.get(dirPath), refreshPackages);
         } catch (IOException e) {
             throw new ServletException(e);
         }
-    }
-
-    private void installBundleFromJar(HttpServletRequest req, HttpServletResponse resp, boolean refreshPackages) throws IOException, ServletException {
-
-        Collection<Part> parts = req.getParts();
-        if (parts.size() != 1) {
-            logAndWriteError("Found " + parts.size() + " items to process, but only updating 1 bundle is supported", resp);
-            return;
-        }
-
-        Part part = parts.iterator().next();
-
-        try (InputStream input = part.getInputStream()) {
-            installBundleFromJar(input, refreshPackages);
-            InstallationResult result = new InstallationResult(true, null);
-            resp.setStatus(200);
-            result.render(resp.getWriter());
-        } catch (IllegalArgumentException e) {
-            logAndWriteError(e, resp);
-        }
-    }
-
-    /**
-     * 
-     * @param inputStream
-     * @param refreshPackages
-     * @throws IOException
-     * @throws IllegalArgumentException if the provided input stream does not contain a valid OSGi bundle
-     */
-    Bundle installBundleFromJar(InputStream inputStream, boolean refreshPackages) throws IOException {
-        try (InputStream input = new BufferedInputStream(new CloseShieldInputStream(inputStream), MANIFEST_SIZE_IN_INPUTSTREAM)) {
-            input.mark(MANIFEST_SIZE_IN_INPUTSTREAM);
-            final String version;
-            final String symbolicName;
-            try (JarInputStream jar = new JarInputStream(new BoundedInputStream(new CloseShieldInputStream(input), MANIFEST_SIZE_IN_INPUTSTREAM))) {
-                
-                Manifest manifest = jar.getManifest();
-                if (manifest == null) {
-                    throw new IllegalArgumentException("Uploaded jar file does not contain a manifest");
-                }
-                symbolicName = manifest.getMainAttributes().getValue(Constants.BUNDLE_SYMBOLICNAME);
-                if (symbolicName == null) {
-                    throw new IllegalArgumentException("Manifest does not have a " + Constants.BUNDLE_SYMBOLICNAME);
-                }
-                version = manifest.getMainAttributes().getValue(Constants.BUNDLE_VERSION);
-            }
-            // go back to beginning of input stream
-            // the JarInputStream is used only for validation, we need a fresh input stream for updating
-            input.reset();
-
-            Bundle found = getBundle(symbolicName);
-            try {
-                return installOrUpdateBundle(found, input, "inputstream:" + symbolicName + "-" + version + ".jar", refreshPackages);
-            } catch (BundleException e) {
-                throw new IllegalArgumentException("Unable to install/update bundle " + symbolicName, e);
-            }
-        }
-    }
-
-    private void logAndWriteError(String message, HttpServletResponse resp) throws IOException {
-        logger.info(message);
-        resp.setStatus(500);
-        new InstallationResult(false, message).render(resp.getWriter());
     }
 
     private void logAndWriteError(Exception e, HttpServletResponse resp) throws IOException {
