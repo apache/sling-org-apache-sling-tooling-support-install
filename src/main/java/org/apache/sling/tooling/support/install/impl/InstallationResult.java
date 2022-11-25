@@ -31,20 +31,14 @@ public class InstallationResult {
         this.message = message;
     }
 
-    public void render(Writer out) {
-
-        try {
-            JSONWriter writer = new JSONWriter(out);
-            writer.object();
-            writer.key("status").value(status ? "OK" : "FAILURE");
-            if (message != null) {
-                writer.key("message").value(message);
-            }
-            writer.endObject();
-        } catch (IOException e) {
-            // never happens
-            throw new RuntimeException(e);
+    public void render(Writer out) throws IOException {
+        JSONWriter writer = new JSONWriter(out);
+        writer.object();
+        writer.key("status").value(status ? "OK" : "FAILURE");
+        if (message != null) {
+            writer.key("message").value(message);
         }
+        writer.endObject();
     }
 
 }
