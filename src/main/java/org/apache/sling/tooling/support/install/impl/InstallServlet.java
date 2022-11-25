@@ -37,7 +37,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -221,11 +220,9 @@ public class InstallServlet extends HttpServlet {
         } else {
             final String entry = prefix + sourceFileOrDir.getFileName();
             if (!JarFile.MANIFEST_NAME.equals(entry)) {
-                try (InputStream fis = Files.newInputStream(sourceFileOrDir)) {
-                    final ZipEntry anEntry = new ZipEntry(entry);
-                    zos.putNextEntry(anEntry);
-                    IOUtils.copy(fis, zos);
-                }
+                final ZipEntry anEntry = new ZipEntry(entry);
+                zos.putNextEntry(anEntry);
+                Files.copy(sourceFileOrDir, zos);
             }
         }
     }
